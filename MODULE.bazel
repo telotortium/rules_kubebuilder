@@ -1,0 +1,75 @@
+###############################################################################
+# Bazel now uses Bzlmod by default to manage external dependencies.
+# Please consider migrating your external dependencies from WORKSPACE to MODULE.bazel.
+#
+# For more details, please check https://github.com/bazelbuild/bazel/issues/18958
+###############################################################################
+
+module(
+    name = "rules_kubebuilder",
+    version = "0.1.0",
+)
+
+# Keep consistent with https://github.com/openai/openai/blob/master/MODULE.bazel
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "rules_go", version = "0.55.1")
+bazel_dep(name = "rules_pkg", version = "1.0.1")
+
+# Create controller-gen and kustomize repos via local extensions so that
+# this module can reference them from its packages (toolchains).
+cg = use_extension("@rules_kubebuilder//controller-gen:extensions.bzl", "cg_ext")
+cg.controller_gen(
+    arches = [
+        "amd64",
+        "arm64",
+    ],
+    version = "0.17.1",
+)  # create controller_gen_<os>_<arch>
+use_repo(
+    cg,
+    "controller_gen_darwin_amd64",
+    "controller_gen_darwin_arm64",
+    "controller_gen_linux_amd64",
+    "controller_gen_linux_arm64",
+)
+
+kz = use_extension("@rules_kubebuilder//kustomize:extensions.bzl", "kz_ext")
+kz.kustomize(
+    arches = [
+        "amd64",
+        "arm64",
+    ],
+    version = "5.7.1",
+)  # create kustomize_<os>_<arch>
+use_repo(
+    kz,
+    "kustomize_darwin_amd64",
+    "kustomize_darwin_arm64",
+    "kustomize_linux_amd64",
+    "kustomize_linux_arm64",
+)
+
+# Create Kubebuilder SDK repo (used by tests)
+kb = use_extension("@rules_kubebuilder//kubebuilder:extensions.bzl", "kb_ext")
+kb.kubebuilder_sdk(
+    name = "kubebuilder_sdk",
+    version = "4.7.1",
+)
+use_repo(kb, "kubebuilder_sdk")
+
+# Register toolchains so that local builds/tests in this repository resolve
+# the kustomize and controller-gen toolchains. When used as a dependency,
+# only the root module's register_toolchains(...) is honored, so these lines
+# are effectively ignored by downstream consumers.
+register_toolchains(
+    # controller-gen toolchains
+    "@rules_kubebuilder//controller-gen:controller_gen_linux_amd64_toolchain",
+    "@rules_kubebuilder//controller-gen:controller_gen_linux_arm64_toolchain",
+    "@rules_kubebuilder//controller-gen:controller_gen_darwin_amd64_toolchain",
+    "@rules_kubebuilder//controller-gen:controller_gen_darwin_arm64_toolchain",
+    # kustomize toolchains
+    "@rules_kubebuilder//kustomize:kustomize_linux_amd64_toolchain",
+    "@rules_kubebuilder//kustomize:kustomize_linux_arm64_toolchain",
+    "@rules_kubebuilder//kustomize:kustomize_darwin_amd64_toolchain",
+    "@rules_kubebuilder//kustomize:kustomize_darwin_arm64_toolchain",
+)

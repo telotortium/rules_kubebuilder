@@ -2,6 +2,19 @@
 
 KUBEBUILDER_SHORT_PATH="@@KUBEBUILDER_SHORT_PATH@@"
 
-kubebuilder_short_path=$(readlink $KUBEBUILDER_SHORT_PATH)
+# Resolve kubebuilder path to an absolute path before changing directories.
+# Because Bazel runfile symlinks often point to relative targets, the path
+# printed by readlink may become invalid after the cd, causing the wrapper to
+# fail to locate the binary. The script should resolve to an absolute path
+# before changing directories.
+# Prefer, in order: readlink -f, realpath, then readlink.
+kubebuilder_abs_path=""
+if kubebuilder_abs_path=$(readlink -f "$KUBEBUILDER_SHORT_PATH" 2>/dev/null); then
+  :
+elif kubebuilder_abs_path=$(realpath "$KUBEBUILDER_SHORT_PATH" 2>/dev/null); then
+  :
+else
+  kubebuilder_abs_path=$(readlink "$KUBEBUILDER_SHORT_PATH") || exit 1
+fi
 
-cd "$BUILD_WORKSPACE_DIRECTORY" && "$kubebuilder_short_path" "$@"
+cd "$BUILD_WORKSPACE_DIRECTORY" && "$kubebuilder_abs_path" "$@"

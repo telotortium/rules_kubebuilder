@@ -31,7 +31,7 @@ _kubebuilder = rule(
         "_kubebuilder": attr.label(
             default = "@kubebuilder_sdk//:bin/kubebuilder",
             allow_single_file = True,
-            cfg = "host",
+            cfg = "exec",
             executable = True,
         ),
         "_runner": attr.label(

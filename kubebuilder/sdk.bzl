@@ -13,11 +13,11 @@ def _kubebuilder_download_sdk_impl(ctx):
         fail("Unknown version {}".format(version))
     sha256 = SDK_VERSION_SHA256[version][platform]
     urls = [url.format(version = version, platform = platform) for url in ctx.attr.urls]
-    strip_prefix = ctx.attr.strip_prefix.format(version = version, platform = platform)
-    ctx.download_and_extract(
+    ctx.download(
         url = urls,
-        stripPrefix = strip_prefix,
         sha256 = sha256,
+        output = "kubebuilder",
+        executable = True,
     )
     ctx.template(
         "BUILD.bazel",
@@ -28,13 +28,12 @@ def _kubebuilder_download_sdk_impl(ctx):
 _kubebuilder_download_sdk = repository_rule(
     _kubebuilder_download_sdk_impl,
     attrs = {
-        "version": attr.string(default = "2.3.1"),
+        "version": attr.string(default = "4.7.1"),
         "urls": attr.string_list(
             default = [
-                "https://github.com/kubernetes-sigs/kubebuilder/releases/download/v{version}/kubebuilder_{version}_{platform}.tar.gz",
+                "https://github.com/kubernetes-sigs/kubebuilder/releases/download/v{version}/kubebuilder_{platform}",
             ],
         ),
-        "strip_prefix": attr.string(default = "kubebuilder_{version}_{platform}"),
     },
 )
 
@@ -42,15 +41,26 @@ def kubebuilder_download_sdk(name, **kwargs):
     _kubebuilder_download_sdk(name = name, **kwargs)
 
 def _detect_host_platform(ctx):
+    # Determine OS
     if ctx.os.name == "linux":
-        host = "linux_amd64"
+        os_id = "linux"
     elif ctx.os.name == "mac os x":
-        host = "darwin_amd64"
+        os_id = "darwin"
     else:
         fail("Unsupported operating system: " + ctx.os.name)
-    return host
 
-def kubebuilder_register_sdk(version = "2.3.1"):
+    # Determine CPU architecture
+    arch = ctx.os.arch
+    if arch == "x86_64" or arch == "amd64":
+        arch_id = "amd64"
+    elif arch == "aarch64" or arch == "arm64":
+        arch_id = "arm64"
+    else:
+        fail("Unsupported CPU architecture: " + arch)
+
+    return "{}_{}".format(os_id, arch_id)
+
+def kubebuilder_register_sdk(version = "4.7.1"):
     kubebuilder_download_sdk(
         name = "kubebuilder_sdk",
         version = version,

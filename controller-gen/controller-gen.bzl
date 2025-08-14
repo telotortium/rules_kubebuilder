@@ -1,8 +1,8 @@
 """ Rules to run controller-gen
 """
 
-load("@io_bazel_rules_go//go:def.bzl", "go_context", "go_path")
-load("@io_bazel_rules_go//go/private:providers.bzl", "GoPath")
+load("@rules_go//go:def.bzl", "go_context", "go_path")
+load("@rules_go//go/private:providers.bzl", "GoPath")
 
 def _controller_gen_action(ctx, cg_cmd, outputs, output_path):
     """ Run controller-gen in the sandbox.
@@ -25,6 +25,23 @@ def _controller_gen_action(ctx, cg_cmd, outputs, output_path):
     if ctx.attr.gopath_dep:
         gopath = "$(pwd)/" + ctx.bin_dir.path + "/" + ctx.attr.gopath_dep[GoPath].gopath
 
+    # Compute paths argument: either explicit file list or user-provided pattern
+    if hasattr(ctx.attr, "paths") and ctx.attr.paths:
+        paths_value = ctx.attr.paths
+    else:
+        paths_value = "{{{files}}}".format(files = ",".join([f.path for f in ctx.files.srcs]))
+
+    # Compute paths argument: either explicit file list or user-provided pattern
+    if hasattr(ctx.attr, "paths") and ctx.attr.paths:
+        paths_value = ctx.attr.paths
+    else:
+        paths_value = "{{{files}}}".format(files = ",".join([f.path for f in ctx.files.srcs]))
+
+    # Allow rules to pass through additional controller-gen args (e.g. extra output rules)
+    extra_args = []
+    if hasattr(ctx.attr, "extra_args") and ctx.attr.extra_args:
+        extra_args = ctx.attr.extra_args
+
     cmd = """
           source <($PWD/{godir}/go env) &&
           export PATH=$GOROOT/bin:$PWD/{godir}:$PATH &&
@@ -36,11 +53,12 @@ def _controller_gen_action(ctx, cg_cmd, outputs, output_path):
         godir = go_ctx.go.path[:-1 - len(go_ctx.go.basename)],
         gopath = gopath,
         cmd = "$(pwd)/" + cg_info.controller_gen_bin.path,
-        args = "{cg_cmd} paths={{{files}}} output:dir={outputpath}".format(
-            cg_cmd = cg_cmd,
-            files = ",".join([f.path for f in ctx.files.srcs]),
-            outputpath = output_path,
-        ),
+        args = " ".join([
+            "{cg_cmd}".format(cg_cmd = cg_cmd),
+            "paths={paths}".format(paths = paths_value),
+            # Keep default output to declared directory so Bazel tracks outputs.
+            "output:dir={outputpath}".format(outputpath = output_path),
+        ] + extra_args),
     )
     ctx.actions.run_shell(
         mnemonic = "ControllerGen",
@@ -55,11 +73,23 @@ def _controller_gen_action(ctx, cg_cmd, outputs, output_path):
     )
 
 def _inputs(ctx, go_ctx):
-    inputs = (ctx.files.srcs + go_ctx.sdk.srcs + go_ctx.sdk.tools +
-              go_ctx.sdk.headers + go_ctx.stdlib.libs)
+    # Build a depset of all required inputs; avoid list+depset concatenation.
+    inputs = depset(
+        direct = ctx.files.srcs,
+        transitive = [
+            go_ctx.sdk.srcs,
+            go_ctx.sdk.tools,
+            go_ctx.sdk.headers,
+            go_ctx.stdlib.libs,
+        ],
+    )
 
     if ctx.attr.gopath_dep:
-        inputs += ctx.attr.gopath_dep.files.to_list()
+        inputs = depset(transitive = [inputs, ctx.attr.gopath_dep.files])
+
+    # Include header file if present
+    if hasattr(ctx.attr, "headerFile") and ctx.file.headerFile:
+        inputs = depset(direct = [ctx.file.headerFile], transitive = [inputs])
     return inputs
 
 def _env():
@@ -71,6 +101,8 @@ def _controller_gen_crd_impl(ctx):
     outputdir = ctx.actions.declare_directory(ctx.label.name)
     cg_cmd = "crd"
     extra_args = []
+    if hasattr(ctx.attr, "headerFile") and ctx.file.headerFile:
+        extra_args.append("headerFile={}".format(ctx.file.headerFile.path))
     if ctx.attr.trivialVersions:
         extra_args.append("trivialVersions=true")
     if ctx.attr.preserveUnknownFields:
@@ -90,8 +122,11 @@ def _controller_gen_crd_impl(ctx):
 
 def _controller_gen_object_impl(ctx):
     output = ctx.actions.declare_file("zz_generated.deepcopy.go")
+    cg_cmd = "object"
+    if hasattr(ctx.attr, "headerFile") and ctx.file.headerFile:
+        cg_cmd += ":headerFile={}".format(ctx.file.headerFile.path)
 
-    _controller_gen_action(ctx, "object", [output], output.dirname)
+    _controller_gen_action(ctx, cg_cmd, [output], output.dirname)
 
     return DefaultInfo(
         files = depset([output]),
@@ -101,6 +136,8 @@ def _controller_gen_rbac_impl(ctx):
     outputdir = ctx.actions.declare_directory("rbac")
     cg_cmd = "rbac"
     extra_args = []
+    if hasattr(ctx.attr, "headerFile") and ctx.file.headerFile:
+        extra_args.append("headerFile={}".format(ctx.file.headerFile.path))
     if ctx.attr.roleName:
         extra_args.append("roleName={}".format(ctx.attr.roleName))
     if len(extra_args) > 0:
@@ -128,13 +165,17 @@ COMMON_ATTRS = {
         mandatory = True,
         doc = "Source files passed to controller-gen",
     ),
+    "paths": attr.string(
+        default = "",
+        doc = "If set, overrides srcs with a controller-gen paths=... pattern (e.g., ./...).",
+    ),
     "gopath_dep": attr.label(
         providers = [GoPath],
         mandatory = False,
         doc = "Go lang dependencies, automatically bundled in a go_path() by the macro.",
     ),
     "_go_context_data": attr.label(
-        default = "@io_bazel_rules_go//:go_context_data",
+        default = "@rules_go//:go_context_data",
         doc = "Internal, context for go compilation.",
     ),
 }
@@ -143,7 +184,7 @@ def _crd_extra_attrs():
     ret = COMMON_ATTRS
     ret.update({
         "trivialVersions": attr.bool(
-            default = True,
+            default = False,
         ),
         "preserveUnknownFields": attr.bool(
             default = False,
@@ -151,6 +192,13 @@ def _crd_extra_attrs():
         "crdVersions": attr.string_list(
         ),
         "maxDescLen": attr.int(
+        ),
+        "headerFile": attr.label(
+            allow_single_file = True,
+        ),
+        # Additional controller-gen args, e.g. ["output:crd:artifacts:config=<path>"]
+        "extra_args": attr.string_list(
+            doc = "Additional args appended to controller-gen invocation.",
         ),
     })
     return ret
@@ -161,6 +209,9 @@ def _rbac_extra_attrs():
         "roleName": attr.string(
             default = "manager-role",
         ),
+        "headerFile": attr.label(
+            allow_single_file = True,
+        ),
     })
     return ret
 
@@ -170,7 +221,7 @@ def _webhook_extra_attrs():
 
 def _toolchains():
     return [
-        "@io_bazel_rules_go//go:toolchain",
+        "@rules_go//go:toolchain",
         "@rules_kubebuilder//controller-gen:toolchain",
     ]
 
@@ -182,9 +233,18 @@ _controller_gen_crd = rule(
           "The output directory will be the name of the rule.",
 )
 
+def _object_extra_attrs():
+    ret = COMMON_ATTRS
+    ret.update({
+        "headerFile": attr.label(
+            allow_single_file = True,
+        ),
+    })
+    return ret
+
 _controller_gen_object = rule(
     implementation = _controller_gen_object_impl,
-    attrs = COMMON_ATTRS,
+    attrs = _object_extra_attrs(),
     toolchains = _toolchains(),
     doc = "Run the code generating portion of controller-gen. " +
           "You can use the name of this rule as part of the `srcs` attribute " +
@@ -228,7 +288,7 @@ def controller_gen_object(name, **kwargs):
 def controller_gen_rbac(name, **kwargs):
     _maybe_add_gopath_dep(name, kwargs)
     _controller_gen_rbac(name = name, **kwargs)
-    
+
 def controller_gen_webhook(name, **kwargs):
     _maybe_add_gopath_dep(name, kwargs)
     _controller_gen_webhook(name = name, **kwargs)

@@ -1,10 +1,10 @@
 load("@rules_kubebuilder//kubebuilder:sdk.bzl", "kubebuilder_pwd")
 
 exports_files([
-    "bin/etcd",
-    "bin/kube-apiserver",
+    # As of newer Kubebuilder releases, only the kubebuilder binary is
+    # included in the upstream tarball. etcd, kube-apiserver, and kubectl
+    # are no longer bundled and must be provided separately by users.
     "bin/kubebuilder",
-    "bin/kubectl",
 ])
 
 kubebuilder_pwd(

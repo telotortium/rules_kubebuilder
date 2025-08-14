@@ -1,23 +1,58 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+load("@rules_kubebuilder//kubebuilder:assets.bzl", "kubebuilder_assets")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "apackage.go",
-    ],
+    srcs = ["apackage.go"],
     importpath = "apackage",
     visibility = ["//visibility:public"],
     deps = [
     ],
 )
 
+kubebuilder_assets(
+    name = "envtest",
+    etcd = ":dummy_etcd",
+    kube_apiserver = ":dummy_kube_apiserver",
+    kubectl = ":dummy_kubectl",
+)
+
 go_test(
-    name = "go_default_test",
+    name = "test_test",
     srcs = ["apackage_test.go"],
     data = [
-        "@kubebuilder_sdk//:bin/etcd",
+        ":envtest_assets_pwd",
     ],
-    embed = [":go_default_library"],
+    embed = [":test"],
     deps = [
+        "@rules_go//go/runfiles:go_default_library",
     ],
+)
+
+go_library(
+    name = "test",
+    srcs = ["apackage.go"],
+    importpath = "go.openai.org/project/bazel/third_party/rules_kubebuilder/test",
+    visibility = ["//visibility:public"],
+)
+
+# Dummy binaries to stand in for the assets that Kubebuilder used to
+# bundle (etcd, kube-apiserver, kubectl). These are provided as data to
+# demonstrate wiring without relying on upstream bundles.
+go_binary(
+    name = "dummy_etcd",
+    srcs = ["dummy_etcd_main.go"],
+    visibility = ["//visibility:public"],
+)
+
+go_binary(
+    name = "dummy_kube_apiserver",
+    srcs = ["dummy_kube_apiserver_main.go"],
+    visibility = ["//visibility:public"],
+)
+
+go_binary(
+    name = "dummy_kubectl",
+    srcs = ["dummy_kubectl_main.go"],
+    visibility = ["//visibility:public"],
 )
