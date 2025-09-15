@@ -3,6 +3,12 @@
 DEFAULT_VERSION = "4.7.1"
 
 SDK_VERSION_SHA256 = {
+    "4.8.0": {
+        "linux_amd64": "4f784e52845db48320cd37b579ae331149a8a61a2e13ed04230034c97a017897",
+        "darwin_amd64": "3ef6fb437d04468742a082be1d5621852cd7278fe1e4693f2c13c37b1a391019",
+        "linux_arm64": "9b6b5e37c84600a387396a5635badcc59cbc3b8ed3ae5f17b1fcabec0a7b61ed",
+        "darwin_arm64": "4719a3e0ea3a1fac9718b49e8deb63f79e091a7fd30e06e779880eba726a2ba2",
+    },
     "4.7.1": {
         "linux_amd64": "83ae391dc7aecc0b7d85d6c375b40207272538efa46233eada39e3d82ddc07a6",
         "darwin_amd64": "f0031dbf157cdc15048ba092f1daf8b6abced8bca92d0e23ad8e3667b1fd30bb",

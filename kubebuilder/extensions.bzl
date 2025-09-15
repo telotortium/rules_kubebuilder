@@ -10,8 +10,8 @@ Example usage in MODULE.bazel:
   bazel_dep(name = "rules_kubebuilder", version = "0.1.0")
 
   kb = use_extension("@rules_kubebuilder//kubebuilder:extensions.bzl", "kb_ext")
-  kb.kubebuilder_sdk(name = "kubebuilder_sdk_4_7_1", version = "4.7.1")
-  use_repo(kb, "kubebuilder_sdk_4_7_1")
+  kb.kubebuilder_sdk(name = "kubebuilder_sdk_4_8_0", version = "4.8.0")
+  use_repo(kb, "kubebuilder_sdk_4_8_0")
 
   # Register toolchains at the root (do NOT call from an extension)
   register_toolchains(
