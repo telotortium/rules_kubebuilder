@@ -156,7 +156,7 @@
     "//controller-gen:extensions.bzl%cg_ext": {
       "general": {
         "bzlTransitiveDigest": "yeYb4fQOVBf7WOc1zFgTyh/mBWI4NQuVMDPk6TFv2uo=",
-        "usagesDigest": "ikX6TAUyRi/fwhOVPKA4J4jNAfd231F7eQxsMpVUhRM=",
+        "usagesDigest": "wOvjBKNTJr/dAVS+n2fsikp4c8yrUR0Dj13hKskdlCE=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -164,7 +164,7 @@
           "controller_gen_linux_amd64": {
             "repoRuleId": "@@//controller-gen:repo.bzl%_download_controller_gen",
             "attributes": {
-              "version": "0.17.1",
+              "version": "0.19.0",
               "os": "linux",
               "arch": "amd64",
               "urls": []
@@ -173,7 +173,7 @@
           "controller_gen_linux_arm64": {
             "repoRuleId": "@@//controller-gen:repo.bzl%_download_controller_gen",
             "attributes": {
-              "version": "0.17.1",
+              "version": "0.19.0",
               "os": "linux",
               "arch": "arm64",
               "urls": []
@@ -182,7 +182,7 @@
           "controller_gen_darwin_amd64": {
             "repoRuleId": "@@//controller-gen:repo.bzl%_download_controller_gen",
             "attributes": {
-              "version": "0.17.1",
+              "version": "0.19.0",
               "os": "darwin",
               "arch": "amd64",
               "urls": []
@@ -191,7 +191,7 @@
           "controller_gen_darwin_arm64": {
             "repoRuleId": "@@//controller-gen:repo.bzl%_download_controller_gen",
             "attributes": {
-              "version": "0.17.1",
+              "version": "0.19.0",
               "os": "darwin",
               "arch": "arm64",
               "urls": []
@@ -229,7 +229,7 @@
           "kubebuilder_sdk": {
             "repoRuleId": "@@//kubebuilder:sdk.bzl%_kubebuilder_download_sdk",
             "attributes": {
-              "version": "4.7.1"
+              "version": "4.8.0"
             }
           }
         },

@@ -23,7 +23,7 @@ cg.controller_gen(
         "amd64",
         "arm64",
     ],
-    version = "0.17.1",
+    version = "0.19.0",
 )  # create controller_gen_<os>_<arch>
 use_repo(
     cg,
@@ -53,7 +53,7 @@ use_repo(
 kb = use_extension("@rules_kubebuilder//kubebuilder:extensions.bzl", "kb_ext")
 kb.kubebuilder_sdk(
     name = "kubebuilder_sdk",
-    version = "4.7.1",
+    version = "4.8.0",
 )
 use_repo(kb, "kubebuilder_sdk")
 

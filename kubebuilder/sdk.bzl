@@ -28,7 +28,7 @@ def _kubebuilder_download_sdk_impl(ctx):
 _kubebuilder_download_sdk = repository_rule(
     _kubebuilder_download_sdk_impl,
     attrs = {
-        "version": attr.string(default = "4.7.1"),
+        "version": attr.string(default = "4.8.0"),
         "urls": attr.string_list(
             default = [
                 "https://github.com/kubernetes-sigs/kubebuilder/releases/download/v{version}/kubebuilder_{platform}",
@@ -60,7 +60,7 @@ def _detect_host_platform(ctx):
 
     return "{}_{}".format(os_id, arch_id)
 
-def kubebuilder_register_sdk(version = "4.7.1"):
+def kubebuilder_register_sdk(version = "4.8.0"):
     kubebuilder_download_sdk(
         name = "kubebuilder_sdk",
         version = version,
